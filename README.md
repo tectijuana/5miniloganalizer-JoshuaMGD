@@ -1,167 +1,265 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/QtRYN9D3)
-[![Open in Codespaces](https://classroom.github.com/assets/launch-codespace-2972f46106e565e64193e422d61a12cf1da4916b45550586e14ef0a7c637dd04.svg)](https://classroom.github.com/open-in-codespaces?assignment_repo_id=23684789)
+# Asignación de variantes para Mini Cloud Log Analyzer
 
-# Práctica 1
+Este documento está dirigido al profesorado para organizar la práctica tipo **GitHub Classroom**.
 
-## Implementación de un Mini Cloud Log Analyzer en ARM64
+## Resumen de variantes
 
-**Modalidad:** Individual
-**Entorno de trabajo:** AWS Ubuntu ARM64 + GitHub Classroom
-**Lenguaje:** ARM64 Assembly (GNU Assembler) + Bash + GNU Make
-
----
-
-## Introducción
-
-Los sistemas modernos de cómputo en la nube generan continuamente registros (*logs*) que permiten monitorear el estado de servicios, detectar fallas y activar alertas ante eventos críticos.
-
-En esta práctica se desarrollará un módulo simplificado de análisis de logs, implementado en **ARM64 Assembly**, inspirado en tareas reales de monitoreo utilizadas en sistemas cloud, observabilidad y administración de infraestructura.
-
-El programa procesará códigos de estado HTTP suministrados mediante entrada estándar (stdin):
-
-```bash id="y1gcmc"
-cat logs.txt | ./analyzer
-```
+- **Variante A**: contar códigos **2xx, 4xx y 5xx**.
+- **Variante B**: encontrar el **código más frecuente**.
+- **Variante C**: detectar la **primera aparición de 503**.
+- **Variante D**: detectar **3 errores consecutivos** (4xx/5xx).
+- **Variante E**: calcular un **health score** del servicio.
 
 ---
+
+# Portada del proyecto: Mini Cloud Log Analyzer (Bash Script + ARM64 Assembly)
+
+## Nombre de la práctica
+**Implementación de un Mini Cloud Log Analyzer en Bash Script + ARM64 Assembly**
+
+## Variante asignada
+**Variante D: detectar 3 errores consecutivos (4xx/5xx)**
 
 ## Objetivo general
+Desarrollar un analizador simple de logs de servidor que procese códigos HTTP desde la entrada estándar o desde un archivo de texto, utilizando una combinación de:
 
-Diseñar e implementar, en lenguaje ensamblador ARM64, una solución para procesar registros de eventos y detectar condiciones definidas según la variante asignada.
+- **Bash Script** para automatización,
+- **ARM64 Assembly** para la lógica principal,
+- **GNU Make** para compilación y ejecución,
+- y ejecución final en un entorno **AWS Ubuntu 24 ARM64**.
 
----
+## Propósito de la práctica
+Esta práctica busca que el estudiante:
 
-## Objetivos específicos
+- comprenda el flujo de entrada de datos desde consola o archivo,
+- implemente lógica de análisis en ensamblador ARM64,
+- use syscalls Linux sin depender de libc,
+- automatice compilación y pruebas con Bash y Make,
+- y ejecute su solución en un entorno real de AWS ARM64.
 
-El estudiante aplicará:
+## Qué se va a hacer
+En esta variante se implementará un programa que lea una secuencia de códigos HTTP y determine si existen **3 errores consecutivos**, considerando como error cualquier código de las familias:
 
-* programación en ARM64 bajo Linux
-* manejo de registros
-* direccionamiento y acceso a memoria
-* instrucciones de comparación
-* estructuras iterativas en ensamblador
-* saltos condicionales
-* uso de syscalls Linux
-* compilación con GNU Make
-* control de versiones con GitHub Classroom
+- **4xx**
+- **5xx**
 
-Estos temas se alinean con contenidos clásicos de flujo de control, herramientas GNU, manejo de datos y convenciones de programación en ensamblador.   
-
----
-
-## Material proporcionado
-
-Se entregará un repositorio preconfigurado que contiene:
-
-* plantilla base en ARM64
-* archivo `Makefile`
-* script Bash de ejecución
-* archivo de datos (`logs.txt`)
-* pruebas iniciales
-* secciones marcadas con `TODO`
-
-El estudiante deberá completar la lógica correspondiente.
+Si el programa encuentra tres errores seguidos, debe reportarlo.  
+Si no los encuentra, debe indicar que no existe esa condición en el log.
 
 ---
 
-## Variantes de la práctica
+# Enunciado específico de la Variante D
 
-### Variante A
+## Regla de análisis
+Se debe detectar si en la secuencia de entrada aparecen **tres códigos de error consecutivos**, donde cada uno pertenezca a:
 
-Contabilizar:
+- 400 a 499, o
+- 500 a 599.
 
-* respuestas exitosas (2xx)
-* errores del cliente (4xx)
-* errores del servidor (5xx)
+## Ejemplo de log de entrada
+```txt
+200 404 500 503 200 201 404 405 406 204
+```
+
+## Interpretación del ejemplo
+Analizando la secuencia:
+
+- `200` → no es error
+- `404` → error
+- `500` → error
+- `503` → error
+
+Aquí ya aparecen **3 errores consecutivos**:
+
+```txt
+404 500 503
+```
+
+Más adelante también aparece otra secuencia válida:
+
+```txt
+404 405 406
+```
+
+## Resultado esperado
+El programa debe indicar que:
+
+```txt
+Se detectaron 3 errores consecutivos.
+```
+
+Opcionalmente, puede mostrar la primera secuencia encontrada o su posición.
 
 ---
 
-### Variante B
+# Lógica que se implementará
 
-Determinar el código de estado más frecuente.
+## Idea general del algoritmo
+El analizador recorrerá cada código HTTP de la entrada y mantendrá un contador de errores consecutivos.
 
----
+### Reglas:
+1. Si el código está en rango **4xx** o **5xx**, el contador aumenta en 1.
+2. Si el código **no** es error, el contador vuelve a 0.
+3. Si el contador llega a **3**, el programa reporta éxito y termina.
 
-### Variante C
+## Pseudocódigo
+```txt
+contador = 0
 
-Detectar el primer evento crítico (503).
+para cada codigo en la entrada:
+    si codigo es 4xx o 5xx:
+        contador = contador + 1
+    si no:
+        contador = 0
 
----
+    si contador == 3:
+        imprimir "Se detectaron 3 errores consecutivos"
+        terminar
 
-### Variante D
-
-Detectar tres errores consecutivos.
-
----
-
-### Variante E
-
-Calcular índice de salud:
-
-```text id="2u4vvx"
-Health Score = 100 - (errores × 10)
+imprimir "No se detectaron 3 errores consecutivos"
 ```
 
 ---
 
-## Compilación
+# Estructura sugerida del proyecto
 
-```bash id="bmubtb"
+```txt
+cloud-log-analyzer/
+├── README.md
+├── Makefile
+├── run.sh
+├── src/
+│   └── analyzer.s
+├── data/
+│   └── logs_D.txt
+├── tests/
+│   └── test.sh
+└── instructor/
+    └── VARIANTES.md
+```
+
+## Descripción de archivos
+
+### `README.md`
+Documento principal con explicación del proyecto, requisitos, compilación y uso.
+
+### `Makefile`
+Automatiza:
+- compilación,
+- ejecución,
+- pruebas,
+- limpieza de artefactos.
+
+### `run.sh`
+Script Bash para facilitar la ejecución del analizador con un archivo de logs.
+
+### `src/analyzer.s`
+Código principal en **ARM64 Assembly**.  
+Aquí se implementa la lógica para detectar los **3 errores consecutivos**.
+
+### `data/logs_D.txt`
+Archivo de prueba con el log de ejemplo:
+
+```txt
+200 404 500 503 200 201 404 405 406 204
+```
+
+### `tests/test.sh`
+Script de validación automática para revisar si el programa responde correctamente.
+
+---
+
+# Flujo de trabajo recomendado
+
+## 1. Crear el repositorio
+Primero se crea el proyecto base en GitHub Classroom o en un repositorio normal.
+
+## 2. Preparar archivos base
+Se crean los archivos:
+- `README.md`
+- `Makefile`
+- `run.sh`
+- `src/analyzer.s`
+- `data/logs_D.txt`
+
+## 3. Implementar la lógica en Assembly
+En `src/analyzer.s` se programa la detección de errores consecutivos.
+
+## 4. Probar localmente
+Se compila y ejecuta en Linux ARM64 o en un entorno compatible.
+
+## 5. Subir a GitHub
+Se documenta el proyecto y se suben avances al repositorio.
+
+## 6. Ejecutar en AWS ARM64
+Se despliega el proyecto en una instancia Ubuntu ARM64 y se valida su ejecución real.
+
+---
+
+# Cómo tenerlo listo para correr en AWS
+
+## Requisitos previos
+Se necesita una instancia con:
+
+- **Ubuntu 24 ARM64**
+- acceso por SSH,
+- `git`,
+- `make`,
+- `binutils`,
+- `gcc` o ensamblador compatible.
+
+## Instalación de herramientas en AWS
+Una vez dentro de la instancia, ejecutar:
+
+```bash
+sudo apt update
+sudo apt install -y build-essential make gcc binutils git
+```
+
+## Clonar el repositorio
+```bash
+git clone TU_REPOSITORIO.git
+cd cloud-log-analyzer
+```
+
+## Compilar
+```bash
 make
 ```
 
----
+## Ejecutar con archivo de prueba
+```bash
+cat data/logs_D.txt | ./analyzer
+```
 
-## Ejecución
+o bien:
 
-```bash id="gcqlf2"
-cat logs.txt | ./analyzer
+```bash
+make run
+```
+
+## Ejecutar pruebas
+```bash
+make test
+```
+
+## Limpiar artefactos
+```bash
+make clean
 ```
 
 ---
 
-## Entregables
+# Ejemplo de contenido para `logs_D.txt`
 
-Cada estudiante deberá entregar en su repositorio:
-
-* archivo fuente ARM64 funcional
-* solución implementada
-* README explicando diseño y lógica utilizada
-* evidencia de ejecución
-* commits realizados en GitHub Classroom
+```txt
+200 404 500 503 200 201 404 405 406 204
+```
 
 ---
 
-## Criterios de evaluación
+# Salida esperada para el log dado
 
-| Criterio                    | Ponderación |
-| --------------------------- | ----------- |
-| Compilación correcta        | 20%         |
-| Correctitud de la solución  | 35%         |
-| Uso adecuado de ARM64       | 25%         |
-| Documentación y comentarios | 10%         |
-| Evidencia de pruebas        | 10%         |
-
----
-
-## Restricciones
-
-No está permitido:
-
-* resolver la lógica en C
-* resolver la lógica en Python
-* modificar la variante asignada
-* omitir el uso de ARM64 Assembly
-
----
-
-## Competencia a desarrollar
-
-Comprender cómo un problema de procesamiento de datos es implementado a nivel máquina mediante instrucciones ARM64.
-
----
-
-## Nota
-
-Aunque este problema puede resolverse fácilmente en lenguajes de alto nivel, el propósito de la práctica es implementar **cómo lo resolvería la arquitectura**, no únicamente obtener el resultado.
-
+```txt
+Se detectaron 3 errores consecutivos.
+```
