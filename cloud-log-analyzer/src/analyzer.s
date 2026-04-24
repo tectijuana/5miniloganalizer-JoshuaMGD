@@ -98,11 +98,15 @@ process_number:
     cmp x21, #599
     b.gt reset_counter
 
+    mov x26, x27
+    mov x27, x28
+    mov x28, x21
+    
     add x22, x22, #1
-
+    
     cmp x22, #3
     b.ge found
-
+    
     ret
 
 reset_counter:
