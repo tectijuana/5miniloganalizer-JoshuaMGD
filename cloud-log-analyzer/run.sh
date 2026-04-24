@@ -1,22 +1,33 @@
-#!/usr/bin/env bash
-# Script de ejecución rápida para la variante base.
-# Lee el archivo de ejemplo A y lo envía a stdin del analizador.
+#!/bin/bash
+set -e
 
-set -euo pipefail
-
-if [[ ! -x ./analyzer ]]; then
-  echo "[INFO] No existe ./analyzer o no tiene permisos de ejecución. Ejecutando make..."
-  make
+if [ ! -f ./analyzer ]; then
+    echo "No existe ./analyzer. Compilando primero..."
+    make
 fi
 
-if [[ $(uname -m) == "aarch64" ]]; then
-  # Ejecución nativa en ARM64 (escenario esperado en AWS Ubuntu 24 ARM64).
-  cat data/logs_A.txt | ./analyzer
-elif command -v qemu-aarch64 >/dev/null 2>&1; then
-  # Ejecución emulada para quienes trabajan en host x86_64.
-  cat data/logs_A.txt | qemu-aarch64 ./analyzer
-else
-  echo "[ERROR] Este host no es ARM64 y no se encontró qemu-aarch64." >&2
-  echo "        Ejecute esta práctica en AWS Ubuntu 24 ARM64." >&2
-  exit 1
-fi
+LOG_FILE="data/logs_D.txt"
+
+cat "$LOG_FILE" | ./analyzer
+
+echo "Errores consecutivos encontrados:"
+
+awk '
+{
+    count = 0
+    for (i = 1; i <= NF; i++) {
+        if ($i >= 400 && $i <= 599) {
+            count++
+            errores[count] = $i
+
+            if (count == 3) {
+                print errores[1], errores[2], errores[3]
+                exit
+            }
+        } else {
+            count = 0
+            delete errores
+        }
+    }
+}
+' "$LOG_FILE"
